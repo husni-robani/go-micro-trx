@@ -43,7 +43,9 @@ func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	case "task-create":
 		app.taskCreate(w, request_payload.Task)
 	case "task-approve":
+		app.taskApprove(w, request_payload.Task)
 	case "task-reject":
+		app.taskReject(w, request_payload.Task)
 	default:
 		log.Println("invalid handle action")
 		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid action"))
@@ -72,15 +74,15 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid to make request"))
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
 		return
 	}
 	defer resp.Body.Close()
 
 	// check response code from task service
 	if resp.StatusCode != http.StatusAccepted {
-		log.Printf("create task failed with %d status code: %v", resp.StatusCode, err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("create task failed"))
+		log.Printf("create task failed with %d status code", resp.StatusCode)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("create task failed"))
 		return
 	}
 
@@ -91,4 +93,86 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 	responsePayload.Message = "Create task successful"
 
 	app.writeResponse(w, http.StatusCreated, responsePayload)
+}
+
+func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
+	requestPayload, err := json.Marshal(task)
+	if err != nil {
+		log.Println("Failed to marshal task: ", err)
+		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
+		return
+	}
+	
+	// make a request
+	url := "http://task-service/approve"
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
+	if err != nil {
+		log.Println("Failed to make request: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
+		return
+	}
+
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println("Failed to make request: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
+		return
+	}
+	response.Body.Close()
+
+	// check response status code
+	if response.StatusCode != http.StatusAccepted {
+		log.Printf("approve task failed with %d status code", response.StatusCode)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("approve task failed"))
+		return
+	}
+
+	// send success response
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = "approve task successful"
+
+	app.writeResponse(w, http.StatusOK, responsePayload)
+}
+
+
+func (app *Config) taskReject(w http.ResponseWriter, task Task) {
+	requestPayload, err := json.Marshal(task)
+	if err != nil {
+		log.Println("Failed to marshal task: ", err)
+		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
+		return
+	}
+
+	// make request
+	url := "http://task-service/approve"
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
+	if err != nil {
+		log.Println("Failed to make request: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to reject task"))
+		return
+	}
+
+	client := http.Client{}
+	res, err := client.Do(request)
+	if err != nil {
+		log.Println("Failed to make request: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to reject task"))
+		return
+	}
+	res.Body.Close()
+
+	// check response status code
+	if res.StatusCode != http.StatusAccepted {
+		log.Printf("reject task failed with status code %d", res.StatusCode)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("reject task failed"))
+		return
+	}
+
+	// send response
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = "reject task successful"
+	app.writeResponse(w, http.StatusOK, responsePayload)
 }
