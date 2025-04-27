@@ -46,6 +46,8 @@ func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 		app.taskApprove(w, request_payload.Task)
 	case "task-reject":
 		app.taskReject(w, request_payload.Task)
+	case "task-all":
+
 	default:
 		log.Println("invalid handle action")
 		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid action"))
@@ -175,4 +177,41 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 	responsePayload.Error = false
 	responsePayload.Message = "reject task successful"
 	app.writeResponse(w, http.StatusOK, responsePayload)
+}
+
+func (app *Config) taskAll(w http.ResponseWriter) {
+	url := "http::/task-service/all"
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println("failed to make request: ", err)
+		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	
+	client := http.Client{}
+	res, err := client.Do(request)
+	if err != nil {
+		log.Println("failed to make request: ", err)
+		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	defer res.Body.Close()
+
+	// read all tasks from response body
+	var responsePayload jsonResponse
+	decoder := json.NewDecoder(res.Body)
+	
+	if err := decoder.Decode(&responsePayload); err != nil {
+		log.Println("Failed to decode response body: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("internal server error"))
+		return
+	}
+
+	// send response
+	var payload jsonResponse
+	payload.Error = false
+	payload.Message = "get tasks successful"
+	payload.Data = responsePayload.Data
+
+	app.writeResponse(w, http.StatusOK, payload)
 }
