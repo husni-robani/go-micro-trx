@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   broker-service:
     build:
@@ -11,6 +9,16 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+
+  task-service:
+    build:
+      context: ./task-service
+      dockerfile: task-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "postgres://postgres:password@postgres:5432/tasks?sslmode=disable"
 
   postgres:
     image: "postgres:14.2"
