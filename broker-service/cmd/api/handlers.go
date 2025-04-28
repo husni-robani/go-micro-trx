@@ -56,6 +56,7 @@ func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
+	task.Data.Status = 0
 	requestPayload, err := json.Marshal(task)
 	if err != nil {
 		log.Println("Failed to marshal task: ", err)
