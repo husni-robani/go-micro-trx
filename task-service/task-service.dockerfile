@@ -4,7 +4,7 @@ FROM golang:1.24-alpine AS build
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go.mod download
+RUN go mod download
 
 COPY . .
 
@@ -17,4 +17,4 @@ WORKDIR /app
 
 COPY --from=build /app/taskApp .
 
-CMD ["/app/taskAPP"]
+CMD ["/app/taskApp"]
