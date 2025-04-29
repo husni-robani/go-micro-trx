@@ -77,3 +77,18 @@ func (t *Task) RejectTask(taskId int) error {
 
 	return nil
 }
+
+func (t *Task) GetTaskByID(taskId int) (*Task, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20 * time.Second)
+	defer cancel()
+
+	var taskResult Task
+
+	row := db.QueryRowContext(ctx, "SELECT task_id, type, data, status, step FROM tasks WHERE task_id = $1", taskId)
+	if err :=  row.Scan(&taskResult.TaskID, &taskResult.Type, &taskResult.Data, &taskResult.Status, &taskResult.Step); err != nil {
+		log.Println("failed to scan task from database: ", err)
+		return nil, err
+	}
+
+	return &taskResult, nil
+}
