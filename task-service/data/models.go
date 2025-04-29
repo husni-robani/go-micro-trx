@@ -32,7 +32,7 @@ func (t *Task) CreateTask(newTask Task) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20 * time.Second)
 	defer cancel()
 
-	result, err := db.ExecContext(ctx, "INSERT INTO tasks (type, data, status, step) values ($1, $2, 0, 1)", newTask.Type, newTask.Data)
+	result, err := db.ExecContext(ctx, "INSERT INTO tasks (type, data, status, step) values ($1, $2, 0, 2)", newTask.Type, newTask.Data)
 	if err != nil {
 		log.Println("Failed to exec query insert: ", err)
 		return err
@@ -57,6 +57,23 @@ func (t *Task) ApproveTask(taskId int) error {
 
 	rowAffected, _ := result.RowsAffected()
 	log.Println("Task updated | rows affected: ", rowAffected)
+
+	return nil
+}
+
+func (t *Task) RejectTask(taskId int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 20)
+	defer cancel()
+
+	query := "UPDATE FROM tasks SET status = 2 WHERE task_id = $1"
+	result, err := db.ExecContext(ctx, query, taskId)
+	if err != nil {
+		log.Println("Failed to reject task: ", err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Println("task updated to reject | rows affected: ", rowsAffected)
 
 	return nil
 }

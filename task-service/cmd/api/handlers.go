@@ -71,8 +71,6 @@ func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("MAKE TRANSACTION")
-
 	// call transaction-service handler to make transaction
 	url := "http://transaction-service/create"
 	var sendRequestPayload struct {
