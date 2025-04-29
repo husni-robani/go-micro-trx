@@ -65,7 +65,7 @@ func (t *Task) RejectTask(taskId int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 20)
 	defer cancel()
 
-	query := "UPDATE FROM tasks SET status = 2 WHERE task_id = $1"
+	query := "UPDATE tasks SET status = 2 WHERE task_id = $1"
 	result, err := db.ExecContext(ctx, query, taskId)
 	if err != nil {
 		log.Println("Failed to reject task: ", err)
