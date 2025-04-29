@@ -42,3 +42,21 @@ func (t *Task) CreateTask(newTask Task) error {
 	log.Printf("Data inserted | Rows affected: %d", rowAffected)
 	return nil
 }
+
+func (t *Task) ApproveTask(taskId int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20 * time.Second)
+	defer cancel()
+
+	query := "UPDATE tasks set status = 1, step = 2 WHERE task_id = $1"
+
+	result, err := db.ExecContext(ctx, query, taskId)
+	if err != nil {
+		log.Println("Failed to update task to approve: ", err)
+		return err
+	}
+
+	rowAffected, _ := result.RowsAffected()
+	log.Println("Task updated | rows affected: ", rowAffected)
+
+	return nil
+}

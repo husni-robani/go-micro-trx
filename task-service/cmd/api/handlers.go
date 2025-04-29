@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"task-service/data"
@@ -47,5 +49,72 @@ func (app *Config) createTask(w http.ResponseWriter, r *http.Request) {
 	var responsePayload jsonResponse
 	responsePayload.Error = false
 	responsePayload.Message = "Create new task successful"
+	app.writeResponse(w, http.StatusAccepted, responsePayload)
+}
+
+func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
+	// read request
+	var requestPayload struct{
+		TaskID int `json:"task_id"`
+		Data Transaction `json:"data"`
+	}
+
+	if err := app.readJson(r, &requestPayload); err != nil {
+		log.Println("failed to read request payload: ", err)
+		app.errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// approve task
+	if err := app.Models.Task.ApproveTask(requestPayload.TaskID); err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to approve task"))
+		return
+	}
+
+	log.Println("MAKE TRANSACTION")
+
+	// call transaction-service handler to make transaction
+	url := "http://transaction-service/create"
+	var sendRequestPayload struct {
+		TaskID int `json:"task_id"`
+		DebitAccount string `json:"debit_account"`
+		CreditAccount string `json:"credit_account"`
+		Amount int64 `json:"amount"`
+	}
+	sendRequestPayload.TaskID = requestPayload.TaskID
+	sendRequestPayload.DebitAccount = requestPayload.Data.DebitAccount
+	sendRequestPayload.CreditAccount = requestPayload.Data.CreditAccount
+	sendRequestPayload.Amount = requestPayload.Data.Amount
+
+	jsonPayload, err := json.Marshal(sendRequestPayload)
+	if err != nil {
+		log.Println("Failed to marshal send request payload: ", err)
+		app.errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	
+	request, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+
+	client := http.Client{}
+	res, err := client.Do(request)
+	if err != nil {
+		log.Println("Failed to perform post request: ", err)
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make transaction"))
+		return
+	}
+	defer res.Body.Close()
+
+		// check is response code = accepted
+	if res.StatusCode != http.StatusAccepted {
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make transaction"))
+		return
+	}
+
+
+	// send response
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = fmt.Sprintf("task %d approved!", requestPayload.TaskID)
+
 	app.writeResponse(w, http.StatusAccepted, responsePayload)
 }
