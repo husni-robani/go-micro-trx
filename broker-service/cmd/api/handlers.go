@@ -47,6 +47,7 @@ func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	case "task-reject":
 		app.taskReject(w, request_payload.Task)
 	case "task-all":
+		app.taskAll(w)
 
 	default:
 		log.Println("invalid handle action")
