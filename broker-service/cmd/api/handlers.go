@@ -86,7 +86,7 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 	// check response code from task service
 	if resp.StatusCode != http.StatusAccepted {
 		log.Printf("create task failed with %d status code", resp.StatusCode)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("create task failed"))
+		app.errorResponse(w, resp.StatusCode, errors.New("create task failed"))
 		return
 	}
 
@@ -128,7 +128,7 @@ func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
 	// check response status code
 	if response.StatusCode != http.StatusAccepted {
 		log.Printf("approve task failed with %d status code", response.StatusCode)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("approve task failed"))
+		app.errorResponse(w, response.StatusCode, errors.New("approve task failed"))
 		return
 	}
 
@@ -150,7 +150,7 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 	}
 
 	// make request
-	url := "http://task-service/approve"
+	url := "http://task-service/reject"
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
 	if err != nil {
 		log.Println("Failed to make request: ", err)
@@ -170,7 +170,7 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 	// check response status code
 	if res.StatusCode != http.StatusAccepted {
 		log.Printf("reject task failed with status code %d", res.StatusCode)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("reject task failed"))
+		app.errorResponse(w, res.StatusCode, errors.New("reject task failed"))
 		return
 	}
 
@@ -205,7 +205,7 @@ func (app *Config) taskAll(w http.ResponseWriter) {
 	
 	if err := decoder.Decode(&responsePayload); err != nil {
 		log.Println("Failed to decode response body: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("internal server error"))
+		app.errorResponse(w, res.StatusCode, errors.New("internal server error"))
 		return
 	}
 
