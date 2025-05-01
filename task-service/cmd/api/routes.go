@@ -27,6 +27,7 @@ func (app *Config) routes() http.Handler{
 	mux.Post("/create", app.createTask)
 	mux.Post("/approve", app.approveTask)
 	mux.Post("/reject", app.rejectTask)
+	mux.Get("/all", app.getAllTask)
 
 	return mux
 }

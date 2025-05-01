@@ -10,17 +10,10 @@ import (
 	"task-service/data"
 )
 
-type Transaction struct {
-	Amount int64 `json:"amount,omitempty"`
-	Status int `json:"status,omitempty"`
-	DebitAccount string `json:"debit_account,omitempty"`
-	CreditAccount string `json:"credit_account,omitempty"`
-}
-
 func (app *Config) createTask(w http.ResponseWriter, r *http.Request) {	
 	var requestPayload struct {
 		Type string `json:"type"`
-		Data Transaction `json:"data"`
+		Data data.Transaction `json:"data"`
 	}
 
 	if err := app.readJson(r, &requestPayload); err != nil {
@@ -29,16 +22,9 @@ func (app *Config) createTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMarshal, err := json.Marshal(requestPayload.Data)
-	if err != nil {
-		log.Println("Failed to marshal data task: ", err)
-		app.errorResponse(w, http.StatusBadRequest, err)
-		return
-	}
-
 	newTask := data.Task{
 		Type: requestPayload.Type,
-		Data: dataMarshal,
+		Data: requestPayload.Data,
 	}
 
 	if err := app.Models.Task.CreateTask(newTask); err != nil {
@@ -56,7 +42,7 @@ func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 	// read request
 	var requestPayload struct{
 		TaskID int `json:"task_id"`
-		Data Transaction `json:"data"`
+		Data data.Transaction `json:"data"`
 	}
 
 	if err := app.readJson(r, &requestPayload); err != nil {
@@ -162,5 +148,20 @@ func (app *Config) rejectTask(w http.ResponseWriter, r *http.Request){
 	var responsePayload jsonResponse
 	responsePayload.Error = false
 	responsePayload.Message = "task rejected!"
+	app.writeResponse(w, http.StatusAccepted, responsePayload)
+}
+
+func (app *Config) getAllTask(w http.ResponseWriter, r *http.Request) {
+	tasks, err := app.Models.Task.GetAll()
+	if err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to get tasks"))
+		return
+	}
+
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = "Get all task successful"
+	responsePayload.Data = tasks
+
 	app.writeResponse(w, http.StatusAccepted, responsePayload)
 }

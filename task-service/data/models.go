@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"time"
 )
@@ -20,11 +21,18 @@ func New(dbConn *sql.DB) Models {
 }
 
 type Task struct {
-	TaskID int
-	Type string
-	Data []byte
-	Status int
-	Step int
+	TaskID int `json:"task_id"`
+	Type string `json:"type"`
+	Data  Transaction `json:"data"`
+	Status int `json:"status"`
+	Step int `json:"step"`
+}
+
+type Transaction struct {
+	Amount int64 `json:"amount,omitempty"`
+	Status int `json:"status,omitempty"`
+	DebitAccount string `json:"debit_account,omitempty"`
+	CreditAccount string `json:"credit_account,omitempty"`
 }
 
 
@@ -91,4 +99,40 @@ func (t *Task) GetTaskByID(taskId int) (*Task, error) {
 	}
 
 	return &taskResult, nil
+}
+
+func (t *Task) GetAll() ([]Task, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20 * time.Second)
+	defer cancel()
+
+	rows, err := db.QueryContext(ctx, "SELECT task_id, type, data, status, step FROM tasks")
+	if err != nil {
+		log.Println("Failed to exec select query: ", err)
+		return nil, err
+	}
+
+	var tasks []Task
+
+	for rows.Next(){
+		var task Task
+		var tempDataTask []uint8
+
+		if err := rows.Scan(&task.TaskID, &task.Type, &tempDataTask, &task.Status, &task.Step); err != nil {
+			log.Println("failed to scan task from rows: ", err)
+			return nil, err
+		}
+
+		// TODO: PERBAIK INI
+		var dataTask Transaction
+		if err := json.Unmarshal(tempDataTask, &dataTask); err != nil {
+			log.Println("failed to unmarshal data: ", err)
+			return nil, err
+		}
+
+		task.Data = dataTask
+		
+		tasks = append(tasks, task)
+	}
+	
+	return tasks, nil
 }
