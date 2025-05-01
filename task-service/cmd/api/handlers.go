@@ -42,7 +42,6 @@ func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 	// read request
 	var requestPayload struct{
 		TaskID int `json:"task_id"`
-		Data data.Transaction `json:"data"`
 	}
 
 	if err := app.readJson(r, &requestPayload); err != nil {
@@ -78,9 +77,9 @@ func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 		Amount int64 `json:"amount"`
 	}
 	sendRequestPayload.TaskID = requestPayload.TaskID
-	sendRequestPayload.DebitAccount = requestPayload.Data.DebitAccount
-	sendRequestPayload.CreditAccount = requestPayload.Data.CreditAccount
-	sendRequestPayload.Amount = requestPayload.Data.Amount
+	sendRequestPayload.DebitAccount = task.Data.DebitAccount
+	sendRequestPayload.CreditAccount = task.Data.CreditAccount
+	sendRequestPayload.Amount = task.Data.Amount
 
 	jsonPayload, err := json.Marshal(sendRequestPayload)
 	if err != nil {

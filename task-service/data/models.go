@@ -40,7 +40,14 @@ func (t *Task) CreateTask(newTask Task) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20 * time.Second)
 	defer cancel()
 
-	result, err := db.ExecContext(ctx, "INSERT INTO tasks (type, data, status, step) values ($1, $2, 0, 2)", newTask.Type, newTask.Data)
+	
+	jsonData, err := json.Marshal(newTask.Data)
+	if err != nil {
+		log.Println("Failed to marshaling data task: ", err)
+		return err
+	}
+
+	result, err := db.ExecContext(ctx, "INSERT INTO tasks (type, data, status, step) values ($1, $2, 0, 2)", newTask.Type, jsonData)
 	if err != nil {
 		log.Println("Failed to exec query insert: ", err)
 		return err
@@ -91,10 +98,18 @@ func (t *Task) GetTaskByID(taskId int) (*Task, error) {
 	defer cancel()
 
 	var taskResult Task
+	var tempData []uint8
 
+	
 	row := db.QueryRowContext(ctx, "SELECT task_id, type, data, status, step FROM tasks WHERE task_id = $1", taskId)
-	if err :=  row.Scan(&taskResult.TaskID, &taskResult.Type, &taskResult.Data, &taskResult.Status, &taskResult.Step); err != nil {
+	if err :=  row.Scan(&taskResult.TaskID, &taskResult.Type, &tempData, &taskResult.Status, &taskResult.Step); err != nil {
 		log.Println("failed to scan task from database: ", err)
+		return nil, err
+	}
+
+	// unmarshal tempData to struct
+	if err := json.Unmarshal(tempData, &taskResult.Data); err != nil {
+		log.Println("Failed to unmarshal data task: ", err)
 		return nil, err
 	}
 
