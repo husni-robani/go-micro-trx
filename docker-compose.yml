@@ -20,6 +20,16 @@ services:
     environment:
       DSN: "postgres://postgres:password@postgres:5432/micro_trx?sslmode=disable"
 
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: transaction-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "postgres://postgres:password@postgres:5432/micro_trx?sslmode=disable"
+
   postgres:
     image: "postgres:14.2"
     restart: always
