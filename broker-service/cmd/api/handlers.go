@@ -24,7 +24,6 @@ type Task struct {
 type Transaction struct {
 	Amount int64 `json:"amount,omitempty"`
 	Status int `json:"status,omitempty"`
-	TaskID int `json:"task_id,omitempty"`
 	DebitAccount string `json:"debit_account,omitempty"`
 	CreditAccount string `json:"credit_account,omitempty"`
 }
@@ -182,7 +181,7 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 }
 
 func (app *Config) taskAll(w http.ResponseWriter) {
-	url := "http::/task-service/all"
+	url := "http://task-service/all"
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("failed to make request: ", err)
@@ -205,7 +204,7 @@ func (app *Config) taskAll(w http.ResponseWriter) {
 	
 	if err := decoder.Decode(&responsePayload); err != nil {
 		log.Println("Failed to decode response body: ", err)
-		app.errorResponse(w, res.StatusCode, errors.New("internal server error"))
+		app.errorResponse(w, http.StatusInternalServerError, errors.New("internal server error"))
 		return
 	}
 
