@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"transaction-service/data"
 
 	_ "github.com/lib/pq"
 )
 
-type Config struct{}
+type Config struct{
+	Models data.Models
+}
 
 const webPort = "80"
 
@@ -18,7 +21,9 @@ func main(){
 	db := connectDB()
 	db.Query("SELECT * FROM transactions;")
 
-	app := Config{}
+	app := Config{
+		Models: data.New(db),
+	}
 
 	log.Printf("Starting web server on port %s ...\n", webPort)
 
