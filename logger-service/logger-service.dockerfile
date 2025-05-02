@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN env CGO_ENABLED=0 GOOS=linux go build -u loggerApp ./cmd/api
+RUN env CGO_ENABLED=0 GOOS=linux go build -o loggerApp ./cmd/api
 
 # stage 2
 FROM alpine:latest
@@ -16,4 +16,4 @@ WORKDIR /app
 
 COPY --from=build /app/loggerApp .
 
-CMD [ "/app/taskApp" ]
+CMD [ "/app/loggerApp" ]
