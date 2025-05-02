@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	mongo_uri = "mongodb://mongo:27017"
+	mongo_uri = "mongodb://mongodb:27017"
 	web_port = "80"
 )
 
@@ -39,10 +39,18 @@ func main() {
 func connectMongoDB() *mongo.Client {
 	log.Println("Starting MongoDB Connection ...")
 
-	client, err := mongo.Connect(options.Client().ApplyURI(mongo_uri))
+	option := options.Client().ApplyURI(mongo_uri)
+	option.SetAuth(options.Credential{
+		Username: "admin",
+		Password: "password",
+	})
+
+	client, err := mongo.Connect(option)
 	if err != nil {
-		log.Println("Failed to connect MongoDB: ", err)
+		log.Panic("Failed to connect MongoDB: ", err)
 	}
+
+	log.Println("Connected to MongoDB!")
 
 	return client
 }
