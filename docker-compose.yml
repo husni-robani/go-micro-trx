@@ -30,6 +30,14 @@ services:
     environment:
       DSN: "postgres://postgres:password@postgres:5432/micro_trx?sslmode=disable"
 
+  logger-service:
+    build:
+      context: ./logger-service
+      dockerfile: logger-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
+
   postgres:
     image: "postgres:14.2"
     restart: always
