@@ -35,5 +35,5 @@ func (app *Config) writeLog(w http.ResponseWriter, r *http.Request) {
 	responsePayload.Message = "insert log successful!"
 	responsePayload.Data = newLog
 
-	app.writeResponse(w, http.StatusCreated, responsePayload)
+	app.writeResponse(w, http.StatusAccepted, responsePayload)
 }
