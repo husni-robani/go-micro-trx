@@ -5,7 +5,7 @@ import (
 	"task-service/data"
 )
 
-type RPCServer struct {
+type TaskRPCServer struct {
 	Models data.Models
 }
 
@@ -15,8 +15,8 @@ type RPCResponsePayload struct {
 	Message string `json:"message,omitempty"`
 }
 
-func NewRPCServer(models data.Models) RPCServer {
-	return RPCServer{
+func NewRPCServer(models data.Models) TaskRPCServer {
+	return TaskRPCServer{
 		Models: models,
 	}
 }
@@ -27,7 +27,7 @@ type CreatePayload struct {
 	CreditAccount string
 }
 
-func (r *RPCServer) CreateTask(payload CreatePayload, result *RPCResponsePayload) error{
+func (r *TaskRPCServer) CreateTask(payload CreatePayload, result *RPCResponsePayload) error{
 	newTask := data.Task{
 		Type: "transaction",
 		Data: data.Transaction{

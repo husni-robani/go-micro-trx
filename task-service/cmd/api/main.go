@@ -28,7 +28,7 @@ func main() {
 	
 
 	// Running RPC
-	if err := rpc.Register(new(RPCServer)); err != nil{
+	if err := rpc.Register(new(TaskRPCServer)); err != nil{
 		log.Panic("Failed to register RPC: ", err)
 	}
 
