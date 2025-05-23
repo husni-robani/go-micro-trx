@@ -1,8 +1,9 @@
 BROKER_EXECUTABLE=brokerApp
 LOGGER_EXECUTABLE=loggerApp
 TASK_EXECUTABLE=taskApp
+TRANSACTION_EXECUTABLE=transactionApp
 
-up_build: build_broker build_logger build_task
+up_build: build_broker build_logger build_task build_transaction
 	@echo "Stoping docker image (if running) ..."
 	docker compose down
 	@echo "Building and starting docker images ..."
@@ -32,3 +33,8 @@ build_task:
 	@echo "building binary task-service ..."
 	cd task-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TASK_EXECUTABLE} ./cmd/api
 	@echo "Build task service done!"
+
+build_transaction:
+	@echo "building binary transaction-service ..."
+	cd transaction-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TRANSACTION_EXECUTABLE} ./cmd/api
+	@echo "Build transaction service done"
