@@ -7,36 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"task-service/data"
 )
-
-func (app *Config) createTask(w http.ResponseWriter, r *http.Request) {	
-	var requestPayload struct {
-		Type string `json:"type"`
-		Data data.Transaction `json:"data"`
-	}
-
-	if err := app.readJson(r, &requestPayload); err != nil {
-		log.Println("failed to read request payload: ", err)
-		app.errorResponse(w, http.StatusBadRequest, err)
-		return
-	}
-
-	newTask := data.Task{
-		Type: requestPayload.Type,
-		Data: requestPayload.Data,
-	}
-
-	if err := app.Models.Task.CreateTask(newTask); err != nil {
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to create new task"))
-		return
-	}
-
-	var responsePayload jsonResponse
-	responsePayload.Error = false
-	responsePayload.Message = "Create new task successful"
-	app.writeResponse(w, http.StatusAccepted, responsePayload)
-}
 
 func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 	// read request
@@ -111,42 +82,6 @@ func (app *Config) approveTask(w http.ResponseWriter, r *http.Request) {
 	responsePayload.Error = false
 	responsePayload.Message = fmt.Sprintf("task %d approved!", requestPayload.TaskID)
 
-	app.writeResponse(w, http.StatusAccepted, responsePayload)
-}
-
-func (app *Config) rejectTask(w http.ResponseWriter, r *http.Request){
-	// read request body
-	var requestPayload struct {
-		TaskID int `json:"task_id"`
-	}
-	if err := app.readJson(r, &requestPayload); err != nil{
-		log.Println("Failed to read request body: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
-		return
-	}
-
-	// get task from database
-	task, err := app.Models.Task.GetTaskByID(requestPayload.TaskID)
-	if err != nil {
-		app.errorResponse(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	if task.Status != 0 || task.Step != 2 {
-		app.errorResponse(w, http.StatusBadRequest, errors.New("task cannot be reject"))
-		return
-	}
-
-	// update task
-	if err := task.RejectTask(); err != nil {
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to reject task"))
-		return
-	}
-
-	// send response
-	var responsePayload jsonResponse
-	responsePayload.Error = false
-	responsePayload.Message = "task rejected!"
 	app.writeResponse(w, http.StatusAccepted, responsePayload)
 }
 
