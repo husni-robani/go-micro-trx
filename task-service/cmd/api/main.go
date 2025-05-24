@@ -28,7 +28,8 @@ func main() {
 	
 
 	// Running RPC
-	if err := rpc.Register(new(TaskRPCServer)); err != nil{
+	rpcServer := NewRPCServer(app.Models)
+	if err := rpc.Register(&rpcServer); err != nil{
 		log.Panic("Failed to register RPC: ", err)
 	}
 
@@ -48,7 +49,7 @@ func main() {
 }
 
 func rpcListen() error {
-	listener, err := net.Listen("tcp", "0.0.0.0:50001")
+	listener, err := net.Listen("tcp", ":50001")
 	if err != nil {
 		log.Panic("TCP Connection failed: ", err)
 		return err

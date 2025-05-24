@@ -11,7 +11,6 @@ type TaskRPCServer struct {
 
 type RPCResponsePayload struct {
 	Error bool `json:"error"`
-	Data any `json:"data,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
@@ -41,15 +40,14 @@ func (r *TaskRPCServer) CreateTask(payload CreatePayload, result *RPCResponsePay
 		log.Println("Failed to make task: ", err)
 		*result = RPCResponsePayload{
 			Error: true,
-			Data: nil,
 			Message: err.Error(),
 		}
+		return err
 	}
 
 	*result = RPCResponsePayload{
 		Error: false,
-		Data: newTask,
-		Message: "Make task successful",
+		Message: "task created!",
 	}
 	return nil
 }
