@@ -18,6 +18,8 @@ services:
       replicas: 1
     environment:
       DSN: "postgres://postgres:password@postgres:5432/micro_trx?sslmode=disable"
+    env_file:
+      - ./task-service/.env
 
   transaction-service:
     build:

@@ -17,8 +17,6 @@ type Config struct {
 	Models data.Models
 }
 
-const webPort = "80"
-
 func main() {
 	db := connectDB()
 
@@ -35,21 +33,21 @@ func main() {
 
 	go rpcListen()
 
-	log.Printf("Running task service on port %s ...\n", webPort)
+	log.Printf("Running task service on port %s (HTTP) and %s (RPC) ...\n", os.Getenv("HTTP_PORT"), os.Getenv("RPC_PORT"))
 
 	server := http.Server{
-		Addr: ":" + webPort,
+		Addr: ":" + os.Getenv("HTTP_PORT"),
 		Handler: app.routes(),
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Panic("Failed to run server on port ", webPort)
+		log.Panic("Failed to run server on port ", os.Getenv("HTTP_PORT"))
 		return
 	}
 }
 
 func rpcListen() error {
-	listener, err := net.Listen("tcp", ":50001")
+	listener, err := net.Listen("tcp", ":" + os.Getenv("RPC_PORT"))
 	if err != nil {
 		log.Panic("TCP Connection failed: ", err)
 		return err

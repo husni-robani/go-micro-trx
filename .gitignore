@@ -3,3 +3,4 @@ brokerApp
 loggerApp
 taskApp
 transactionApp
+.env
