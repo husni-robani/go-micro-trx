@@ -28,6 +28,17 @@ type Transaction struct {
 	CreditAccount string `json:"credit_account,omitempty"`
 }
 
+type RPCResponsePayload struct {
+	Error bool `json:"error"`
+	Message string `json:"message,omitempty"`
+}
+
+type CreateTaskPayload struct {
+	Amount int
+	DebitAccount string
+	CreditAccount string
+}
+
 
 func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	var request_payload RequestPayload
@@ -56,45 +67,24 @@ func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
-	task.Data.Status = 0
-	requestPayload, err := json.Marshal(task)
-	if err != nil {
-		log.Println("Failed to marshal task: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
+	var rpcResponse RPCResponsePayload
+	payload := CreateTaskPayload {
+		Amount: int(task.Data.Amount),
+		DebitAccount: task.Data.DebitAccount,
+		CreditAccount: task.Data.CreditAccount,
+	}
+
+	rpcMethod := "TaskRPCServer.CreateTask"
+	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
+		log.Printf("Failed to call %v: %v\n", rpcMethod, err)
+		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// make a post request to /create
-	url := "http://task-service/create"
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
-		return
-	}
 
-	client := http.Client{}
-	resp, err := client.Do(request)
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
-		return
-	}
-	defer resp.Body.Close()
-
-	// check response code from task service
-	if resp.StatusCode != http.StatusAccepted {
-		log.Printf("create task failed with %d status code", resp.StatusCode)
-		app.errorResponse(w, resp.StatusCode, errors.New("create task failed"))
-		return
-	}
-
-	// send response
 	var responsePayload jsonResponse
 	responsePayload.Error = false
-	responsePayload.Data = task
-	responsePayload.Message = "Create task successful"
-
+	responsePayload.Message = rpcResponse.Message
 	app.writeResponse(w, http.StatusCreated, responsePayload)
 }
 
