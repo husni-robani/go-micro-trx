@@ -39,6 +39,9 @@ type CreateTaskPayload struct {
 	CreditAccount string
 }
 
+type RejectTaskPayload struct {
+	ID int
+}
 
 func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	var request_payload RequestPayload
@@ -129,41 +132,20 @@ func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
 
 
 func (app *Config) taskReject(w http.ResponseWriter, task Task) {
-	requestPayload, err := json.Marshal(task)
-	if err != nil {
-		log.Println("Failed to marshal task: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
+	var rpcResponse RPCResponsePayload
+	payload := RejectTaskPayload{
+		ID: task.TaskID,
+	}
+	rpcMethod := "TaskRPCServer.RejectTask"
+
+	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
+		log.Println("Failed to call rpc method")
+		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// make request
-	url := "http://task-service/reject"
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to reject task"))
-		return
-	}
-
-	client := http.Client{}
-	res, err := client.Do(request)
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to reject task"))
-		return
-	}
-	res.Body.Close()
-
-	// check response status code
-	if res.StatusCode != http.StatusAccepted {
-		log.Printf("reject task failed with status code %d", res.StatusCode)
-		app.errorResponse(w, res.StatusCode, errors.New("reject task failed"))
-		return
-	}
-
-	// send response
 	var responsePayload jsonResponse
 	responsePayload.Error = false
-	responsePayload.Message = "reject task successful"
+	responsePayload.Message = "task Rejected!"
 	app.writeResponse(w, http.StatusOK, responsePayload)
 }
