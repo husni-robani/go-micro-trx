@@ -12,16 +12,6 @@ type jsonResponse struct {
 	Data any `json:"data,omitempty"`
 }
 
-func (app *Config) readJson(r *http.Request, payload any) error {
-	decoder := json.NewDecoder(r.Body)
-
-	if err := decoder.Decode(&payload); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (app *Config) writeResponse(w http.ResponseWriter, statusCode int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
