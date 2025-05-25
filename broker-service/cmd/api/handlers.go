@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -40,6 +38,10 @@ type CreateTaskPayload struct {
 }
 
 type RejectTaskPayload struct {
+	ID int
+}
+
+type ApproveTaskPayload struct {
 	ID int
 }
 
@@ -90,35 +92,15 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 }
 
 func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
-	requestPayload, err := json.Marshal(task)
-	if err != nil {
-		log.Println("Failed to marshal task: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body"))
-		return
+	var rpcResponse RPCResponsePayload
+	payload := ApproveTaskPayload{
+		task.TaskID,
 	}
 	
-	// make a request
-	url := "http://task-service/approve"
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestPayload))
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
-		return
-	}
-
-	client := http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		log.Println("Failed to make request: ", err)
-		app.errorResponse(w, http.StatusInternalServerError, errors.New("failed to make request"))
-		return
-	}
-	response.Body.Close()
-
-	// check response status code
-	if response.StatusCode != http.StatusAccepted {
-		log.Printf("approve task failed with %d status code", response.StatusCode)
-		app.errorResponse(w, response.StatusCode, errors.New("approve task failed"))
+	rpcMethod := "TaskRPCServer.ApproveTask"
+	if err := app.rpcClient.Call(rpcMethod, payload, &rpcResponse); err != nil {
+		log.Printf("Failed to call %v: %v\n", rpcMethod, err)
+		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
