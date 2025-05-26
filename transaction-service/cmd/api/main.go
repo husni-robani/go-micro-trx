@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"net"
-	"net/http"
 	"net/rpc"
 	"os"
 	"time"
@@ -17,7 +16,7 @@ type Config struct{
 	Models data.Models
 }
 
-const webPort = "80"
+const rpcPort = "50001"
 
 func main(){
 	db := connectDB()
@@ -28,28 +27,17 @@ func main(){
 
 	rpcServer := NewTransactionRPCServer(app.Models)
 	
-	log.Printf("Starting web server on port %s ...\n", webPort)
+	log.Printf("Starting rpc server on port %s ...\n", rpcPort)
 
-	// RPC
 	if err := rpc.Register(rpcServer); err != nil {
 		log.Panic("Failed to register RPC object: ", err)
 	}
-	go listenRPC()
-
-	// REST
-	srv := http.Server{
-		Handler: app.routes(),
-		Addr: ":" + webPort,
-	}
-
-	if err := srv.ListenAndServe(); err != nil {
-		log.Panic("Failed to run web server")
-	}
-
+	
+	listenRPC()
 }
 
 func listenRPC() error {
-	listener, err := net.Listen("tcp", "0.0.0.0:50001")
+	listener, err := net.Listen("tcp", "0.0.0.0:" + rpcPort)
 	if err != nil {
 		log.Fatal("Failed to listen RPC: ", err)
 		return err

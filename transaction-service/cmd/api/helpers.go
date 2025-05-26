@@ -1,47 +1,48 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
 
-type jsonResponse struct {
-	Error bool `json:"error"`
-	Message string `json:"message"`
-	Data any `json:"data,omitempty"`
-}
-
-func (app *Config) readJson(r *http.Request, payload any) error {
-	decoder := json.NewDecoder(r.Body)
-
-	if err := decoder.Decode(&payload); err != nil {
-		return err
+func sendLog(name string, data string) error {
+	payload := struct{
+		Name string `json:"name"`
+		Data string	`json:"data"`
+	}{
+		Name: name,
+		Data: data,
 	}
 
-	return nil
-}
-
-func (app *Config) writeResponse(w http.ResponseWriter, statusCode int, data any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Println("Failed to marshaling data: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return err
-	}
-
-	w.Write(jsonData)
-	return nil
-}
-
-
-func (app *Config) errorResponse(w http.ResponseWriter, statusCode int, err error) {
-	var payload jsonResponse
-	payload.Error = true
-	payload.Message = err.Error()
 	
-	app.writeResponse(w, statusCode, payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		log.Println("Failed to marshaling payload: ", err)
+		return err
+	}
+
+	url := "http://logger-service/log"
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if  err != nil {
+		log.Println("Failed to make request: ", err)
+		return err
+	}
+
+	client := http.Client{}
+	res, err := client.Do(request)
+	if err != nil {
+		log.Println("Failed to make request: ", err)
+		return err
+	}
+
+	if res.StatusCode != http.StatusAccepted {
+		log.Printf("send log failed with %d status code", res.StatusCode)
+		return errors.New("failed to create log")
+	}
+
+	return nil
 }
