@@ -15,6 +15,7 @@ import (
 
 type Config struct {
 	Models data.Models
+	RPCClient *rpc.Client
 }
 
 func main() {
@@ -26,7 +27,11 @@ func main() {
 	
 
 	// Running RPC
-	rpcServer := NewRPCServer(app.Models)
+	rpcServer := TaskRPCServer{
+		Models: data.New(db),
+		RPCClientTransaction: connectRPC("transaction-service:50001"),
+	}
+
 	if err := rpc.Register(&rpcServer); err != nil{
 		log.Panic("Failed to register RPC: ", err)
 	}
@@ -91,5 +96,29 @@ func connectDB() *sql.DB {
 			log.Panic("Cant connect to database: ", err)
 			return nil
 		}
+	}
+}
+
+func connectRPC(address string) *rpc.Client {
+	counter := 0
+	
+	for {
+		client, err := rpc.Dial("tcp", address)
+
+		if counter >= 5 {
+			log.Fatalf("%s connection failed: %v", address, err)
+			return nil
+		}
+
+		if err != nil {
+			log.Printf("%s not connected yet....", address)
+			time.Sleep(time.Second * 3)
+			counter++
+			continue
+		}
+
+		log.Println(address + " connected!")
+
+		return client
 	}
 }

@@ -1,16 +1,15 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"log"
-	"net/http"
+	"net/rpc"
 	"task-service/data"
 )
 
 type TaskRPCServer struct {
 	Models data.Models
+	RPCClientTransaction *rpc.Client
 }
 
 type RPCResponsePayload struct {
@@ -37,12 +36,6 @@ type RejectTaskPayload struct {
 
 type ApproveTaskPayload struct {
 	ID int
-}
-
-func NewRPCServer(models data.Models) TaskRPCServer {
-	return TaskRPCServer{
-		Models: models,
-	}
 }
 
 func (r *TaskRPCServer) CreateTask(payload CreateTaskPayload, result *RPCResponsePayload) error{
@@ -121,7 +114,7 @@ func (r *TaskRPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCRespo
 	}
 
 	// make and start transaction
-	if err := makeAndStartTransaction(*task); err != nil {
+	if err := r.makeAndStartTransaction(*task); err != nil {
 		return err
 	}
 	
@@ -134,38 +127,21 @@ func (r *TaskRPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCRespo
 	return nil
 }
 
-func makeAndStartTransaction(task data.Task) error {
-	url := "http://transaction-service/create"
-	requestPayload := CreateTransactionPayload {
+func (r *TaskRPCServer) makeAndStartTransaction(task data.Task) error {
+	method := "TransactionRPCServer.CreateTransaction"
+	
+	var responsePayload RPCResponsePayload
+
+	trxPayload := CreateTransactionPayload{
 		TaskID: task.TaskID,
 		DebitAccount: task.Data.DebitAccount,
 		CreditAccount: task.Data.CreditAccount,
 		Amount: task.Data.Amount,
 	}
 
-	jsonPayload, err := json.Marshal(requestPayload)
-	if err != nil {
-		log.Println("Failed to marshaling payload: ", err)
+	if err := r.RPCClientTransaction.Call(method, trxPayload, &responsePayload); err != nil {
+		log.Println("Failed to make and start transaction: ", responsePayload.Message)
 		return err
-	}
-
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		log.Println("Failed to create transaction: ", err)
-		return err
-	}
-
-	client := http.Client{}
-
-	resp, err := client.Do(request)
-	if err != nil {
-		log.Println("Failed to create transaction: ", err)
-		return err
-	}
-
-	if resp.StatusCode != http.StatusAccepted {
-		log.Printf("Failed to create transaction with status code %v", resp.StatusCode)
-		return errors.New(resp.Status)
 	}
 
 	return nil
