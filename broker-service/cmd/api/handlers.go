@@ -79,7 +79,7 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 
 	rpcMethod := "TaskRPCServer.CreateTask"
 	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
-		log.Printf("Failed to call %v: %v\n", rpcMethod, err)
+		log.Printf("error while call %v: %v\n", rpcMethod, err)
 		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -99,7 +99,7 @@ func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
 	
 	rpcMethod := "TaskRPCServer.ApproveTask"
 	if err := app.rpcClient.Call(rpcMethod, payload, &rpcResponse); err != nil {
-		log.Printf("Failed to call %v: %v\n", rpcMethod, err)
+		log.Printf("error while call %v: %v\n", rpcMethod, err)
 		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -121,7 +121,7 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 	rpcMethod := "TaskRPCServer.RejectTask"
 
 	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
-		log.Println("Failed to call rpc method")
+		log.Printf("error while call %v: %v\n", rpcMethod, err)
 		app.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
