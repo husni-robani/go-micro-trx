@@ -77,7 +77,7 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 		CreditAccount: task.Data.CreditAccount,
 	}
 
-	rpcMethod := "TaskRPCServer.CreateTask"
+	rpcMethod := "RPCServer.CreateTask"
 	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
 		app.errorResponse(w, http.StatusInternalServerError, err)
@@ -97,7 +97,7 @@ func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
 		task.TaskID,
 	}
 	
-	rpcMethod := "TaskRPCServer.ApproveTask"
+	rpcMethod := "RPCServer.ApproveTask"
 	if err := app.rpcClient.Call(rpcMethod, payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
 		app.errorResponse(w, http.StatusInternalServerError, err)
@@ -118,7 +118,7 @@ func (app *Config) taskReject(w http.ResponseWriter, task Task) {
 	payload := RejectTaskPayload{
 		ID: task.TaskID,
 	}
-	rpcMethod := "TaskRPCServer.RejectTask"
+	rpcMethod := "RPCServer.RejectTask"
 
 	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
