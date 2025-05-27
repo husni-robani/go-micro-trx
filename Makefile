@@ -21,7 +21,7 @@ up:
 
 build_broker:
 	@echo "Building binary broker-service ..."
-	cd broker-service && env GOOS=linux CGO_ENABLED=0 go build -o ${BROKER_EXECUTABLE} ./cmd/api
+	cd broker-service && env GOOS=linux CGO_ENABLED=0 go build -o ${BROKER_EXECUTABLE} ./cmd
 	@echo "Build broker service done!"
 
 build_logger:

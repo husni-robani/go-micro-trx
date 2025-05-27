@@ -1,10 +1,19 @@
-package main
+package api
 
 import (
+	"broker-service/cmd/config"
 	"errors"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
+
+type APIHandler struct {
+	App *config.Config
+}
 
 type RequestPayload struct {
 	Action string `json:"action"`
@@ -45,31 +54,51 @@ type ApproveTaskPayload struct {
 	ID int
 }
 
-func (app *Config) handleSubmition(w http.ResponseWriter, r *http.Request) {
+
+func (api *APIHandler) Routes() http.Handler {
+	mux := chi.NewRouter()
+
+	mux.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"https://*", "http://*"},
+		AllowedMethods: []string{"GET", "POST", "DELETE", "PUT", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders: []string{"Link"},
+		AllowCredentials: true,
+		MaxAge: 300,
+	}))
+	mux.Use(middleware.Heartbeat("/ping"))
+
+	mux.Post("/handle", api.handleSubmition)
+
+	return mux
+}
+
+// handlers
+func (api *APIHandler) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	var request_payload RequestPayload
 
-	if err := app.readJson(r, &request_payload); err != nil {
+	if err := api.readJson(r, &request_payload); err != nil {
 		log.Println("Failed to read body request: ", err)
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid body request"))
+		api.errorResponse(w, http.StatusBadRequest, errors.New("invalid body request"))
 		return
 	}
 
 	switch request_payload.Action {
 	case "task-create":
-		app.taskCreate(w, request_payload.Task)
+		api.taskCreate(w, request_payload.Task)
 	case "task-approve":
-		app.taskApprove(w, request_payload.Task)
+		api.taskApprove(w, request_payload.Task)
 	case "task-reject":
-		app.taskReject(w, request_payload.Task)
+		api.taskReject(w, request_payload.Task)
 
 	default:
 		log.Println("invalid handle action")
-		app.errorResponse(w, http.StatusBadRequest, errors.New("invalid action"))
+		api.errorResponse(w, http.StatusBadRequest, errors.New("invalid action"))
 		return
 	}
 }
 
-func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskCreate(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := CreateTaskPayload {
 		Amount: int(task.Data.Amount),
@@ -78,9 +107,9 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 	}
 
 	rpcMethod := "RPCServer.CreateTask"
-	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
+	if err := api.App.RPCClientTask.Call(rpcMethod, &payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
-		app.errorResponse(w, http.StatusInternalServerError, err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -88,19 +117,19 @@ func (app *Config) taskCreate(w http.ResponseWriter, task Task) {
 	var responsePayload jsonResponse
 	responsePayload.Error = false
 	responsePayload.Message = rpcResponse.Message
-	app.writeResponse(w, http.StatusCreated, responsePayload)
+	api.writeResponse(w, http.StatusCreated, responsePayload)
 }
 
-func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskApprove(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := ApproveTaskPayload{
 		task.TaskID,
 	}
 	
 	rpcMethod := "RPCServer.ApproveTask"
-	if err := app.rpcClient.Call(rpcMethod, payload, &rpcResponse); err != nil {
+	if err := api.App.RPCClientTask.Call(rpcMethod, payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
-		app.errorResponse(w, http.StatusInternalServerError, err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -109,25 +138,25 @@ func (app *Config) taskApprove(w http.ResponseWriter, task Task) {
 	responsePayload.Error = false
 	responsePayload.Message = "approve task successful"
 
-	app.writeResponse(w, http.StatusOK, responsePayload)
+	api.writeResponse(w, http.StatusOK, responsePayload)
 }
 
 
-func (app *Config) taskReject(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskReject(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := RejectTaskPayload{
 		ID: task.TaskID,
 	}
 	rpcMethod := "RPCServer.RejectTask"
 
-	if err := app.rpcClient.Call(rpcMethod, &payload, &rpcResponse); err != nil {
+	if err := api.App.RPCClientTask.Call(rpcMethod, &payload, &rpcResponse); err != nil {
 		log.Printf("error while call %v: %v\n", rpcMethod, err)
-		app.errorResponse(w, http.StatusInternalServerError, err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	var responsePayload jsonResponse
 	responsePayload.Error = false
 	responsePayload.Message = "task Rejected!"
-	app.writeResponse(w, http.StatusOK, responsePayload)
+	api.writeResponse(w, http.StatusOK, responsePayload)
 }

@@ -8,6 +8,8 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+    env_file:
+      - ./broker-service/.env
 
   task-service:
     build:

@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ type jsonResponse struct {
 	Data any `json:"data,omitempty"`
 }
 
-func (app *Config) readJson(r *http.Request, payload any) error {
+func (app *APIHandler) readJson(r *http.Request, payload any) error {
 	decoder := json.NewDecoder(r.Body)
 
 	if err := decoder.Decode(&payload); err != nil {
@@ -22,7 +22,7 @@ func (app *Config) readJson(r *http.Request, payload any) error {
 	return nil
 }
 
-func (app *Config) writeResponse(w http.ResponseWriter, statusCode int, data any) error {
+func (app *APIHandler) writeResponse(w http.ResponseWriter, statusCode int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
@@ -38,7 +38,7 @@ func (app *Config) writeResponse(w http.ResponseWriter, statusCode int, data any
 }
 
 
-func (app *Config) errorResponse(w http.ResponseWriter, statusCode int, err error) {
+func (app *APIHandler) errorResponse(w http.ResponseWriter, statusCode int, err error) {
 	var payload jsonResponse
 	payload.Error = true
 	payload.Message = err.Error()
