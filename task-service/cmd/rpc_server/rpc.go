@@ -77,6 +77,15 @@ func (r RPCServer) RejectTask(payload RejectTaskPayload, result *RPCResponsePayl
 		return err
 	}
 
+	if task.Status == 1 {
+		log.Printf("Failed to reject transaction, task has been approved")
+		*result = RPCResponsePayload{
+			Error: true,
+			Message: errors.New("task has been rejected").Error(),
+		}
+		return errors.New("task has been rejected")
+	}
+
 	if err := task.RejectTask(); err != nil {
 		log.Println("Failed to reject task: ", err)
 		*result = RPCResponsePayload{
@@ -105,18 +114,31 @@ func (r RPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCResponsePa
 	}
 
 	if task.Status != 0 || task.Step != 2 {
-		log.Println("Task cannot be approve")
-		return errors.New("task cannot be approve")
+		log.Printf("Failed to approve task %v, task has been rejected", task.TaskID)
+		*result = RPCResponsePayload{
+			Error: true,
+			Message: errors.New("task has been rejected").Error(),
+		}
+		return errors.New("task has been rejected")
 	}
 
 	// update task to approve
 	if err := task.ApproveTask(); err != nil {
 		log.Println("Failed to approve task: ", err)
+		*result = RPCResponsePayload{
+			Error: true,
+			Message: err.Error(),
+		}
 		return err
 	}
 
 	// make and start transaction
 	if err := r.makeAndStartTransaction(*task); err != nil {
+		log.Println("Failed to start transaction: ", err)
+		*result = RPCResponsePayload{
+			Error: true,
+			Message: err.Error(),
+		}
 		return err
 	}
 	
