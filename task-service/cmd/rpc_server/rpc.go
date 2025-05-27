@@ -1,14 +1,15 @@
-package main
+package rpc_server
 
 import (
 	"errors"
 	"log"
 	"net/rpc"
+	"task-service/cmd/config"
 	"task-service/data"
 )
 
-type TaskRPCServer struct {
-	Models data.Models
+type RPCServer struct {
+	App *config.Config
 	RPCClientTransaction *rpc.Client
 }
 
@@ -38,7 +39,8 @@ type ApproveTaskPayload struct {
 	ID int
 }
 
-func (r *TaskRPCServer) CreateTask(payload CreateTaskPayload, result *RPCResponsePayload) error{
+// Handlers
+func (r RPCServer) CreateTask(payload CreateTaskPayload, result *RPCResponsePayload) error{
 	newTask := data.Task{
 		Type: "transaction",
 		Data: data.Transaction{
@@ -48,7 +50,7 @@ func (r *TaskRPCServer) CreateTask(payload CreateTaskPayload, result *RPCRespons
 		},
 	}
 
-	if err := r.Models.Task.CreateTask(newTask); err != nil {
+	if err := r.App.Models.Task.CreateTask(newTask); err != nil {
 		log.Println("Failed to make task: ", err)
 		*result = RPCResponsePayload{
 			Error: true,
@@ -64,8 +66,8 @@ func (r *TaskRPCServer) CreateTask(payload CreateTaskPayload, result *RPCRespons
 	return nil
 }
 
-func (r *TaskRPCServer) RejectTask(payload RejectTaskPayload, result *RPCResponsePayload) error {
-	task, err := r.Models.Task.GetTaskByID(payload.ID)
+func (r RPCServer) RejectTask(payload RejectTaskPayload, result *RPCResponsePayload) error {
+	task, err := r.App.Models.Task.GetTaskByID(payload.ID)
 	if err != nil {
 		log.Println("Failed get task: ", err)
 		*result = RPCResponsePayload{
@@ -91,8 +93,8 @@ func (r *TaskRPCServer) RejectTask(payload RejectTaskPayload, result *RPCRespons
 	return nil
 }
 
-func (r *TaskRPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCResponsePayload) error {
-	task, err := r.Models.Task.GetTaskByID(payload.ID)
+func (r RPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCResponsePayload) error {
+	task, err := r.App.Models.Task.GetTaskByID(payload.ID)
 	if err != nil {
 		log.Println("Failed to get task: ", err)
 		*result = RPCResponsePayload{
@@ -127,7 +129,7 @@ func (r *TaskRPCServer) ApproveTask(payload ApproveTaskPayload, result *RPCRespo
 	return nil
 }
 
-func (r *TaskRPCServer) makeAndStartTransaction(task data.Task) error {
+func (r RPCServer) makeAndStartTransaction(task data.Task) error {
 	method := "TransactionRPCServer.CreateTransaction"
 	
 	var responsePayload RPCResponsePayload

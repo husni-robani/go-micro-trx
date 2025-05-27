@@ -13,11 +13,11 @@ services:
     build:
       context: ./task-service
       dockerfile: task-service.dockerfile
+    ports:
+      - "8081:80"
     deploy:
       mode: replicated
       replicas: 1
-    environment:
-      DSN: "postgres://postgres:password@postgres:5432/micro_trx?sslmode=disable"
     env_file:
       - ./task-service/.env
 

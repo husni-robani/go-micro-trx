@@ -31,7 +31,7 @@ build_logger:
 
 build_task:
 	@echo "building binary task-service ..."
-	cd task-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TASK_EXECUTABLE} ./cmd/api
+	cd task-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TASK_EXECUTABLE} ./cmd
 	@echo "Build task service done!"
 
 build_transaction:
