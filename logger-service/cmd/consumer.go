@@ -30,7 +30,7 @@ func NewConsumer(config Config, amqpConn *amqp.Connection, tag string, queue str
 }
 
 func (c Consumer) Listen() {
-	log.Println("Starting to listen RabbitMQ ....")
+	log.Printf("Start listening to queue:  %s....", c.Queue)
 
 	ch, err := c.AMQPConn.Channel()
 	if err != nil {
@@ -50,12 +50,15 @@ func (c Consumer) Listen() {
 	
 	for msg := range msgCh {
 		var newLog LogData
+
 		// unmarshal message
 		if err := json.Unmarshal(msg.Body, &newLog); err != nil {
 			log.Println("Invalid message body format: ", err)
 			msg.Nack(false, false)
 			continue
 		}
+
+		log.Println("message received: ", newLog)
 
 		if err := c.writeLog(newLog); err != nil {
 			log.Println("Failed to write log: ", err)
