@@ -36,5 +36,5 @@ build_task:
 
 build_transaction:
 	@echo "building binary transaction-service ..."
-	cd transaction-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TRANSACTION_EXECUTABLE} ./cmd/api
+	cd transaction-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TRANSACTION_EXECUTABLE} ./cmd
 	@echo "Build transaction service done"
