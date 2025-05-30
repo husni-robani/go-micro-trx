@@ -22,7 +22,7 @@ func main() {
 		Models: data.New(mongoClient),
 	}
 
-	consumer := NewConsumer(app, connectRabbitMQ(), "worker-1", "log")
+	consumer := NewConsumer(app, connectRabbitMQ(), "worker-1", os.Getenv("QUEUE_NAME"))
 	consumer.Listen()
 }
 
