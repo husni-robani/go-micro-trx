@@ -26,7 +26,7 @@ build_broker:
 
 build_logger:
 	@echo "Building binary logger-service ..."
-	cd logger-service && env GOOS=linux CGO_ENABLED=0 go build -o ${LOGGER_EXECUTABLE} ./cmd/api
+	cd logger-service && env GOOS=linux CGO_ENABLED=0 go build -o ${LOGGER_EXECUTABLE} ./cmd
 	@echo "Build logger service done!"
 
 build_task:

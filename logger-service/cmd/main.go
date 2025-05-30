@@ -3,15 +3,12 @@ package main
 import (
 	"log"
 	"logger-service/data"
-	"net/http"
+	"os"
+	"time"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-)
-
-const (
-	mongo_uri = "mongodb://mongodb:27017"
-	web_port = "80"
 )
 
 type Config struct {
@@ -20,26 +17,40 @@ type Config struct {
 
 func main() {
 	mongoClient := connectMongoDB()
+	
 	app := Config{
 		Models: data.New(mongoClient),
 	}
 
-	log.Println("Starting Web Server ...")
+	consumer := NewConsumer(app, connectRabbitMQ(), "worker-1", "log")
+	consumer.Listen()
+}
 
-	srv := http.Server{
-		Addr: ":" + web_port,
-		Handler: app.routes(),
-	}
+func connectRabbitMQ() *amqp.Connection {
+	attemp := 0
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Panic("Failed to running web server: ", err)
+	for {
+		conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
+		if err != nil {
+			if attemp >= 5 {
+				log.Fatal("RabbitMQ connection failed: ", err)
+				return nil
+			}
+
+			attemp ++
+			log.Println("AMQP connection not ready yet....")
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		return conn
 	}
 }
 
 func connectMongoDB() *mongo.Client {
 	log.Println("Starting MongoDB Connection ...")
 
-	option := options.Client().ApplyURI(mongo_uri)
+	option := options.Client().ApplyURI(os.Getenv("MONGO_DSN"))
 	option.SetAuth(options.Credential{
 		Username: "admin",
 		Password: "password",
@@ -50,7 +61,7 @@ func connectMongoDB() *mongo.Client {
 		log.Panic("Failed to connect MongoDB: ", err)
 	}
 
-	log.Println("Connected to MongoDB!")
+	log.Println("MongoDB connected!")
 
 	return client
 }
