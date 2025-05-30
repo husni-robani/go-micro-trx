@@ -10,6 +10,7 @@ import (
 	"transaction-service/data"
 
 	_ "github.com/lib/pq"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Config struct{
@@ -23,7 +24,11 @@ func main(){
 		Models: data.New(db),
 	}
 
-	rpcServer := NewTransactionRPCServer(app.Models)
+	publisher := Publisher{
+		AMQPConn: connectAMQP(),
+	}
+
+	rpcServer := NewTransactionRPCServer(app.Models, publisher)
 
 	if err := rpc.Register(rpcServer); err != nil {
 		log.Panic("Failed to register RPC object: ", err)
@@ -51,6 +56,29 @@ func listenRPC() error {
 		}
 
 		go rpc.ServeConn(rpcConn)
+	}
+}
+
+func connectAMQP() *amqp.Connection {
+	counter := 0
+
+	for {
+		conn, err := amqp.Dial(os.Getenv("AMQP_URL"))
+		if err != nil {
+			counter++
+
+			if counter >= 2 {
+				log.Fatal("AMQP connection failed: ", err)
+				return nil
+			}
+
+			log.Println("AMQP not connceted yet....")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+
+		log.Println("AMQP connected!")
+		return conn
 	}
 }
 

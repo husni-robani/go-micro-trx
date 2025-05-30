@@ -9,11 +9,13 @@ import (
 
 type TransactionRPCServer struct {
 	models data.Models
+	publisher Publisher
 }
 
-func NewTransactionRPCServer(m data.Models) TransactionRPCServer {
+func NewTransactionRPCServer(m data.Models, p Publisher) TransactionRPCServer {
 	return TransactionRPCServer{
 		models: m,
+		publisher: p,
 	}
 }
 
@@ -54,7 +56,7 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 
 	// send log when transaction success
 	if isTransactionSuccess {
-		err := sendLog("transaction", fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount))
+		err := rpc.publisher.PublishLogMessage("transaction", fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount))
 		if err != nil {
 			log.Println("Failed to send log to mongoDB: ", err)
 			*result = RPCResponsePayload{
