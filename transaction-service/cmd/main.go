@@ -16,8 +16,6 @@ type Config struct{
 	Models data.Models
 }
 
-const rpcPort = "50001"
-
 func main(){
 	db := connectDB()
 
@@ -26,8 +24,6 @@ func main(){
 	}
 
 	rpcServer := NewTransactionRPCServer(app.Models)
-	
-	log.Printf("Starting rpc server on port %s ...\n", rpcPort)
 
 	if err := rpc.Register(rpcServer); err != nil {
 		log.Panic("Failed to register RPC object: ", err)
@@ -37,7 +33,10 @@ func main(){
 }
 
 func listenRPC() error {
-	listener, err := net.Listen("tcp", "0.0.0.0:" + rpcPort)
+	port := os.Getenv("RPC_PORT")
+	log.Printf("Starting rpc server on port %s ...\n", port)
+
+	listener, err := net.Listen("tcp", os.Getenv("RPC_HOST") + ":" + port)
 	if err != nil {
 		log.Fatal("Failed to listen RPC: ", err)
 		return err
