@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,13 +10,15 @@ import (
 
 type TransactionRPCServer struct {
 	models data.Models
-	publisher Publisher
+	LogPublisher Publisher
+	MailPublisher Publisher
 }
 
-func NewTransactionRPCServer(m data.Models, p Publisher) TransactionRPCServer {
+func NewTransactionRPCServer(m data.Models, logPublisher Publisher, mailPublisher Publisher) TransactionRPCServer {
 	return TransactionRPCServer{
 		models: m,
-		publisher: p,
+		LogPublisher: logPublisher,
+		MailPublisher: mailPublisher,
 	}
 }
 
@@ -29,6 +32,11 @@ type CreateTransactionPayload struct {
 	DebitAccount string
 	CreditAccount string
 	Amount int64
+}
+
+type LogMessage struct {
+	Name string
+	Data string
 }
 
 func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPayload, result *RPCResponsePayload) error {
@@ -55,8 +63,17 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 	}
 
 	// send log when transaction success
+	jsonMessage, err := json.Marshal(LogMessage{
+		Name: "transaction",
+		Data: fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount),
+	})
+	if err != nil {
+		log.Println("Failed to marshal message: ", err)
+		return err
+	}
+
 	if isTransactionSuccess {
-		err := rpc.publisher.PublishLogMessage("transaction", fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount))
+		err := rpc.LogPublisher.PublishMessage(jsonMessage)
 		if err != nil {
 			log.Println("Failed to send log to mongoDB: ", err)
 			*result = RPCResponsePayload{

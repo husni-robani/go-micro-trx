@@ -24,11 +24,12 @@ func main(){
 		Models: data.New(db),
 	}
 
-	publisher := Publisher{
-		AMQPConn: connectAMQP(),
-	}
+	conn := connectAMQP()
 
-	rpcServer := NewTransactionRPCServer(app.Models, publisher)
+	logPublisher := NewPublisher(conn, os.Getenv("EXCHANGE_NAME"), os.Getenv("LOG_ROUTING_KEY"))
+	mailPublisher := NewPublisher(conn, os.Getenv("EXCHANGE_NAME"), os.Getenv("MAIL_ROUTING_KEY"))
+
+	rpcServer := NewTransactionRPCServer(app.Models, logPublisher, mailPublisher)
 
 	if err := rpc.Register(rpcServer); err != nil {
 		log.Panic("Failed to register RPC object: ", err)
