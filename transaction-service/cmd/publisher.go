@@ -32,13 +32,13 @@ func (p Publisher) PublishMessage(jsonMessage []byte) error {
 		return err
 	}
 
-	// q, err := ch.QueueDeclare(os.Getenv("LOG_QUEUE_NAME"), false, false, false, false, nil)
-	// if err != nil {
-	// 	log.Println("Failed to declare queue: ", err)
-	// 	return err
-	// }
+	err = ch.ExchangeDeclare(p.Exchange, "direct", true, false, false, false, nil)
+	if err != nil {
+		log.Println("Failed to declare exchange: ", err)
+		return err
+	}
 
-	err = ch.Publish("", p.RoutingKey, false, false, amqp.Publishing{
+	err = ch.Publish(p.Exchange, p.RoutingKey, false, false, amqp.Publishing{
 		ContentType: "application/json",
 		Body: jsonMessage,
 	})

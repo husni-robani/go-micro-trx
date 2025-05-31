@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"transaction-service/data"
 )
 
@@ -39,6 +40,13 @@ type LogMessage struct {
 	Data string
 }
 
+type MailMessage struct {
+	Recipient string
+	DebitAccount string
+	CreditAccount string
+	Amount int64
+}
+
 func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPayload, result *RPCResponsePayload) error {
 	newTransaction := data.Transaction{
 		TaskID: trxPayload.TaskID,
@@ -62,25 +70,66 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 		return err
 	}
 
-	// send log when transaction success
-	jsonMessage, err := json.Marshal(LogMessage{
+	// send log and email when transaction success
+		// log message
+	jsonLogMessage, err := json.Marshal(LogMessage{
 		Name: "transaction",
 		Data: fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount),
 	})
 	if err != nil {
-		log.Println("Failed to marshal message: ", err)
+		log.Println("Failed to marshal json: ", err)
+		return err
+	}
+
+		// email message
+	jsonMailMessage, err := json.Marshal(MailMessage{
+		Recipient: "husnir2005@gmail.com",
+		DebitAccount: newTransaction.DebitAccount,
+		CreditAccount: newTransaction.CreditAccount,
+		Amount: int64(newTransaction.Amount),
+	})
+	if err != nil {
+		log.Println("Failed to marshal json: ", err)
 		return err
 	}
 
 	if isTransactionSuccess {
-		err := rpc.LogPublisher.PublishMessage(jsonMessage)
-		if err != nil {
-			log.Println("Failed to send log to mongoDB: ", err)
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var errorPublish []error
+
+		wg.Add(2)
+		go func(){
+			defer wg.Done()
+
+			err := rpc.LogPublisher.PublishMessage(jsonLogMessage)
+			if err != nil {
+				mu.Lock()
+				errorPublish = append(errorPublish, err)
+				mu.Unlock()
+			}
+		}()
+
+		go func(){
+			defer wg.Done()
+
+			err := rpc.MailPublisher.PublishMessage(jsonMailMessage)
+			if err != nil {
+				mu.Lock()
+				errorPublish = append(errorPublish, err)
+				mu.Unlock()
+			}
+		}()
+		
+		wg.Wait()
+
+		if len(errorPublish) > 0 {
+			log.Println("error publish message: ", errorPublish)
 			*result = RPCResponsePayload{
 				Error: true,
-				Message: err.Error(),
+				Message: fmt.Sprintf("Publish message failed: %v", errorPublish),
 			}
-			return err
+			return errorPublish[0]
 		}
 	}
 
