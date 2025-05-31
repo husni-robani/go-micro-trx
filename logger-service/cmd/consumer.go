@@ -13,6 +13,8 @@ type Consumer struct{
 	AMQPConn *amqp.Connection
 	Tag string
 	Queue string
+	Exchange string
+	RoutingKey string
 }
 
 type LogData struct {
@@ -20,12 +22,14 @@ type LogData struct {
 	Data string `json:"data"`
 }
 
-func NewConsumer(config Config, amqpConn *amqp.Connection, tag string, queue string) Consumer {
+func NewConsumer(config Config, amqpConn *amqp.Connection, tag string, queue string, exchange string, routingKey string) Consumer {
 	return Consumer{
 		App: config,
 		AMQPConn: amqpConn,
 		Tag: tag,
 		Queue: queue,
+		Exchange: exchange,
+		RoutingKey: routingKey,
 	}
 }
 
@@ -37,11 +41,25 @@ func (c Consumer) Listen() {
 		log.Fatal("failed to open channel: ", err)
 	}
 
+	// declare exchange
+	err = ch.ExchangeDeclare(c.Exchange, "direct", true, false, false, false, nil)
+	if err != nil {
+		log.Fatal("Failed to declare exchange: ", err)
+	}
+
+	// declare queue
 	_, err = ch.QueueDeclare(c.Queue, false, false, false, false, nil)
 	if err != nil {
 		log.Fatal("Failed to declare queue: ", err)
 	}
 
+	// bind queue and exchange
+	err = ch.QueueBind(c.Queue, c.RoutingKey, c.Exchange, false, nil)
+	if err != nil {
+		log.Fatal("Failed to bind queue to exchange: ", err)
+	}
+
+	// consume
 	msgCh, err := ch.Consume(c.Queue, c.Tag, false, false, false, false, nil)
 	if err != nil {
 		log.Fatal("Failed to consume: ", err)

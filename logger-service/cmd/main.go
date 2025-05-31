@@ -22,7 +22,7 @@ func main() {
 		Models: data.New(mongoClient),
 	}
 
-	consumer := NewConsumer(app, connectRabbitMQ(), "worker-1", os.Getenv("QUEUE_NAME"))
+	consumer := NewConsumer(app, connectRabbitMQ(), "worker-1", os.Getenv("QUEUE_NAME"), os.Getenv("EXCHANGE_NAME"), os.Getenv("ROUTING_KEY"))
 	consumer.Listen()
 }
 
