@@ -36,15 +36,15 @@ type CreateTransactionPayload struct {
 }
 
 type LogMessage struct {
-	Name string
-	Data string
+	Name string `json:"name"`
+	Data string `json:"data"`
 }
 
 type MailMessage struct {
-	Recipient string
-	DebitAccount string
-	CreditAccount string
-	Amount int64
+	Recipient string `json:"recipient"`
+	DebitAccount string `json:"debit_account"`
+	CreditAccount string `json:"credit_account"`
+	Amount int64 `json:"amount"`
 }
 
 func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPayload, result *RPCResponsePayload) error {
