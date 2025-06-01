@@ -45,6 +45,16 @@ services:
     env_file:
       - ./logger-service/.env
 
+  mail-service:
+    build:
+      context: ./mail-service
+      dockerfile: mail-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
+    env_file:
+      - ./mail-service/.env
+
   postgres:
     image: "postgres:14.2"
     restart: always
@@ -80,3 +90,8 @@ services:
       RABBITMQ_DEFAULT_PASS: user
     volumes:
       - ./db-data/rabbitmq/:/var/lib/rabbitmq
+  mailhog:
+    image: "cd2team/mailhog"
+    ports:
+      - "1025:1025"
+      - "8025:8025"

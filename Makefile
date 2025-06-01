@@ -2,8 +2,9 @@ BROKER_EXECUTABLE=brokerApp
 LOGGER_EXECUTABLE=loggerApp
 TASK_EXECUTABLE=taskApp
 TRANSACTION_EXECUTABLE=transactionApp
+MAIL_EXECUTABLE=mailApp
 
-up_build: build_broker build_logger build_task build_transaction
+up_build: build_broker build_logger build_task build_transaction build_mail
 	@echo "Stoping docker image (if running) ..."
 	docker compose down
 	@echo "Building and starting docker images ..."
@@ -38,3 +39,8 @@ build_transaction:
 	@echo "building binary transaction-service ..."
 	cd transaction-service && env GOOS=linux CGO_ENABLED=0 go build -o ${TRANSACTION_EXECUTABLE} ./cmd
 	@echo "Build transaction service done"
+
+build_mail:
+	@echo "building binary mail-service ..."
+	cd mail-service && env GOOS=linux CGO_ENABLED=0 go build -o ${MAIL_EXECUTABLE} ./cmd
+	@echo "Build mail service done"
