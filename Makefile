@@ -44,3 +44,8 @@ build_mail:
 	@echo "building binary mail-service ..."
 	cd mail-service && env GOOS=linux CGO_ENABLED=0 go build -o ${MAIL_EXECUTABLE} ./cmd
 	@echo "Build mail service done"
+
+gen_protobuf:
+	@echo "Generate code from protobuf ..."
+	cd proto && protoc --go_out=. --go-grpc_out=. ./*/*.proto
+	@echo "Generate code done!"
