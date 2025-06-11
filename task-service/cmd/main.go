@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -9,33 +10,81 @@ import (
 	"os"
 	"task-service/cmd/api"
 	"task-service/cmd/config"
+	task_grpc_server "task-service/cmd/grpc_server"
 	"task-service/cmd/rpc_server"
 	"task-service/data"
 	"time"
 
+	taskpb "proto/task"
+
 	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
 )
 
 func main() {
+	models := data.New(connectDB())
+	
 	app := config.Config{
-		Models: data.New(connectDB()),
+		Models: models,
 	}
 
-	api := api.APIHandler{
-		App: &app,
-	}
-
+				// ============RPC============
 	rpc_server := rpc_server.RPCServer{
 		App: &app,
 		RPCClientTransaction: connectRPCClient(os.Getenv("TRANSACTION_RPC_ADDRESS")),
 	}
-
+	// register RPC object
 	if err := rpc.Register(rpc_server); err != nil {
 		log.Fatal("Failed to register RPC: ", err)
 	}
-
+	// serve RPC
 	go serveRPC()
+
+	
+				// ============gRPC============
+	grpc_server := grpc.NewServer()
+	
+	// register gRPC object
+	taskpb.RegisterTaskServiceServer(grpc_server, task_grpc_server.TaskGRPCServer{
+		Models: models,
+	})
+
+	// serve gRPC
+	go serveGRPC(grpc_server)
+
+				// ============API============
+	api := api.APIHandler{
+		App: &app,
+	}
 	serveAPI(api.Routes())
+}
+
+func serveGRPC(grpcServer *grpc.Server) {
+	port := os.Getenv("GRPC_PORT")
+	counter := 0
+	log.Printf("Starting gRPC on Port:%s ....", port)
+
+	var err error
+	for {
+		if counter >= 4 {
+				log.Fatal("gRPC connection failed: ", err)
+		}
+		
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+		if err != nil {
+			counter ++
+			log.Println("gRPC not connected yet....")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		if err := grpcServer.Serve(lis); err != nil {
+			counter ++
+			log.Println("gRPC not connected yet....")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		
+	}
 }
 
 func serveRPC() error {
