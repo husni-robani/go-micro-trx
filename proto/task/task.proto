@@ -6,10 +6,23 @@ package task;
 
 option go_package = "./task;task";
 
+message TransactionDataTask {
+    int64 Amount = 1;
+    int32 Status = 2;
+    string DebitAccount = 3;
+    string CreditAccount = 4;
+}
+
+message DataTask {
+    oneof content {
+        TransactionDataTask transaction = 1;
+    }
+}
+
 message Task {
     int32 TaskID = 1;
     string Type = 2;
-    google.protobuf.Struct Data = 3;
+    DataTask Data = 3;
     int32 Status = 4;
     int32 Step = 5;
 }
