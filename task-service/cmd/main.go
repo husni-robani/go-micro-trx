@@ -10,7 +10,9 @@ import (
 	"os"
 	"task-service/cmd/api"
 	"task-service/cmd/config"
-	task_grpc_server "task-service/cmd/grpc_server"
+	"task-service/cmd/grpc_server"
+
+	// task_grpc_server "task-service/cmd/grpc_server"
 	"task-service/cmd/rpc_server"
 	"task-service/data"
 	"time"
@@ -42,15 +44,15 @@ func main() {
 
 	
 				// ============gRPC============
-	grpc_server := grpc.NewServer()
+	g_server := grpc.NewServer()
 	
 	// register gRPC object
-	taskpb.RegisterTaskServiceServer(grpc_server, task_grpc_server.TaskGRPCServer{
+	taskpb.RegisterTaskServiceServer(g_server, grpc_server.TaskGRPCServer{
 		Models: models,
 	})
 
 	// serve gRPC
-	go serveGRPC(grpc_server)
+	go serveGRPC(g_server)
 
 				// ============API============
 	api := api.APIHandler{
