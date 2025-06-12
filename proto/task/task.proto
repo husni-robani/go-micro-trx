@@ -1,14 +1,15 @@
 syntax = "proto3";
 
-import "google/protobuf/struct.proto";
-
 package task;
 
 option go_package = "./task;task";
 
+service TaskService {
+    rpc CreateTask(CreateTaskRequest) returns (TaskResponse);
+}
+
 message TransactionDataTask {
     int64 Amount = 1;
-    int32 Status = 2;
     string DebitAccount = 3;
     string CreditAccount = 4;
 }
@@ -19,22 +20,12 @@ message DataTask {
     }
 }
 
-message Task {
-    int32 TaskID = 1;
-    string Type = 2;
-    DataTask Data = 3;
-    int32 Status = 4;
-    int32 Step = 5;
-}
-
-message TaskRequest {
-    Task TaskEntry = 1;
+message CreateTaskRequest {
+    string Type = 1;
+    DataTask Data = 2;
 }
 
 message TaskResponse {
-    string Result = 1;
-}
-
-service TaskService {
-    rpc CreateTask(TaskRequest) returns (TaskResponse);
+    bool error = 1;
+    string message = 2;
 }
