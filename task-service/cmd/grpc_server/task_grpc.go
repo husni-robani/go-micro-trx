@@ -2,6 +2,7 @@ package grpc_server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	taskpb "proto/task"
 	"task-service/data"
@@ -19,20 +20,33 @@ func (ts TaskGRPCServer) CreateTask(ctx context.Context, req *taskpb.CreateTaskR
 	
 	switch {
 	case req.Type == "transaction":
-		ts.createTransactionTask(req)
-
+		err := ts.createTransactionTask(req)
+		if err != nil {
+			return ts.writeResponse(true, fmt.Sprintf("Failed to add task to database: %v", err))
+		}
+		return ts.writeResponse(false, "task created!")
 	default:
 		return ts.writeErrorResponse(status.Errorf(codes.InvalidArgument, "type '%s' is not available", req.Type))
 	}
-	
-	return ts.writeResponse(false, "task created!")
+
 }
 
 func (ts TaskGRPCServer) createTransactionTask(task *taskpb.CreateTaskRequest) error {
-	dataTask := task.Data
-	dataTaskContent := task.Data.Content
+	newTask := data.Task{
+		Type: task.Type,
+		Data: data.Transaction{
+			Amount: task.Data.GetTransaction().Amount,
+			DebitAccount: task.Data.GetTransaction().DebitAccount,
+			CreditAccount: task.Data.GetTransaction().CreditAccount,
+		},
+	}
 
-	log.Printf("task: %v\ndataTask: %v\ndataTaskContent: %v\n", task, dataTask, dataTaskContent)
+	if err := ts.Models.Task.CreateTask(newTask); err != nil {
+		log.Println("Failed to add new task to database: ", err)
+		return err
+	}
+
+	fmt.Printf("POSTGRES: Task Created!\nData: %#v", newTask)
 
 	return nil
 }
