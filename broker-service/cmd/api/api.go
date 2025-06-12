@@ -2,9 +2,13 @@ package api
 
 import (
 	"broker-service/cmd/config"
+	"context"
 	"errors"
 	"log"
 	"net/http"
+	"time"
+
+	taskpb "proto/task"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -40,6 +44,7 @@ type RPCResponsePayload struct {
 	Message string `json:"message,omitempty"`
 }
 
+		// RPC Implementation
 type CreateTaskPayload struct {
 	Amount int
 	DebitAccount string
@@ -84,8 +89,10 @@ func (api *APIHandler) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch request_payload.Action {
-	case "task-create":
-		api.taskCreate(w, request_payload.Task)
+	case "rpc-task-create":
+		api.taskCreateViaRPC(w, request_payload.Task)
+	case "grpc-task-create":
+		api.taskCreateViaGRPC(w, request_payload.Task)
 	case "task-approve":
 		api.taskApprove(w, request_payload.Task)
 	case "task-reject":
@@ -98,7 +105,37 @@ func (api *APIHandler) handleSubmition(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *APIHandler) taskCreate(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskCreateViaGRPC(w http.ResponseWriter, task Task) {
+	newTaskrequestPayload := taskpb.CreateTaskRequest{
+		Type: "transaction",
+		Data: &taskpb.DataTask{
+			Content: &taskpb.DataTask_Transaction{
+				Transaction: &taskpb.TransactionDataTask{
+					Amount: task.Data.Amount,
+					DebitAccount: task.Data.DebitAccount,
+					CreditAccount: task.Data.CreditAccount,
+				},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 2)
+	defer cancel()
+
+	grpcRes, err := api.App.GRPCClientTask.CreateTask(ctx, &newTaskrequestPayload)
+	if err != nil {
+		log.Println("gRPC | CreateTask error: ", err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = grpcRes.Message
+	api.writeResponse(w, http.StatusCreated, responsePayload)
+}
+
+func (api *APIHandler) taskCreateViaRPC(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := CreateTaskPayload {
 		Amount: int(task.Data.Amount),
