@@ -68,7 +68,7 @@ func connectAMQP() *amqp.Connection {
 		if err != nil {
 			counter++
 
-			if counter >= 2 {
+			if counter >= 4 {
 				log.Fatal("AMQP connection failed: ", err)
 				return nil
 			}
