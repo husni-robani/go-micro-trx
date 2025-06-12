@@ -24,7 +24,7 @@ func connectRabbitMQ() *amqp.Connection {
 		if err != nil {
 			counter ++
 
-			if counter >= 3 {
+			if counter >= 5 {
 				log.Fatal("RabbitMQ connection failed: ", err)
 			}
 
