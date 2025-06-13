@@ -97,9 +97,10 @@ func (api *APIHandler) handleSubmition(w http.ResponseWriter, r *http.Request) {
 		api.taskApproveViaRPC(w, request_payload.Task)
 	case "grpc-task-approve":
 		api.taskApproveViaGRPC(w, request_payload.Task)
-	case "task-reject":
-		api.taskReject(w, request_payload.Task)
-
+	case "rpc-task-reject":
+		api.taskRejectViaRPC(w, request_payload.Task)
+	case "grpc-task-reject":
+		api.taskRejectViaGRPC(w, request_payload.Task)
 	default:
 		log.Println("invalid handle action")
 		api.errorResponse(w, http.StatusBadRequest, errors.New("invalid action"))
@@ -202,7 +203,7 @@ func (api *APIHandler) taskApproveViaRPC(w http.ResponseWriter, task Task) {
 }
 
 
-func (api *APIHandler) taskReject(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskRejectViaRPC(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := RejectTaskPayload{
 		ID: task.TaskID,
@@ -218,5 +219,26 @@ func (api *APIHandler) taskReject(w http.ResponseWriter, task Task) {
 	var responsePayload jsonResponse
 	responsePayload.Error = false
 	responsePayload.Message = "task Rejected!"
+	api.writeResponse(w, http.StatusOK, responsePayload)
+}
+
+func (api *APIHandler) taskRejectViaGRPC(w http.ResponseWriter, task Task) {
+	grpcRequestPayload := taskpb.RejectTaskRequest{
+		TaskID: int32(task.TaskID),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 3)
+	defer cancel()
+
+	res, err := api.App.GRPCClientTask.RejectTask(ctx, &grpcRequestPayload)
+	if err != nil {
+		log.Println("gRPC | reject task error: ", err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = res.Message
 	api.writeResponse(w, http.StatusOK, responsePayload)
 }
