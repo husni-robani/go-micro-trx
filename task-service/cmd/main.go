@@ -25,6 +25,7 @@ import (
 
 func main() {
 	models := data.New(connectDB())
+	rpcClientTransaction := connectRPCClient(os.Getenv("TRANSACTION_RPC_ADDRESS"))
 	
 	app := config.Config{
 		Models: models,
@@ -33,7 +34,7 @@ func main() {
 				// ============RPC============
 	rpc_server := rpc_server.RPCServer{
 		App: &app,
-		RPCClientTransaction: connectRPCClient(os.Getenv("TRANSACTION_RPC_ADDRESS")),
+		RPCClientTransaction: rpcClientTransaction,
 	}
 	// register RPC object
 	if err := rpc.Register(rpc_server); err != nil {
@@ -49,6 +50,7 @@ func main() {
 	// register gRPC object
 	taskpb.RegisterTaskServiceServer(g_server, grpc_server.TaskGRPCServer{
 		Models: models,
+		RPCClientTransaction: rpcClientTransaction,
 	})
 
 	// serve gRPC

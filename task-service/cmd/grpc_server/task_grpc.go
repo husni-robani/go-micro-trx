@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/rpc"
 	taskpb "proto/task"
+	"task-service/cmd/rpc_server"
 	"task-service/data"
 
 	"google.golang.org/grpc/codes"
@@ -14,6 +16,7 @@ import (
 type TaskGRPCServer struct {
 	taskpb.UnimplementedTaskServiceServer
 	Models data.Models
+	RPCClientTransaction *rpc.Client
 }
 
 func (ts TaskGRPCServer) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequest) (*taskpb.TaskResponse, error) {
@@ -47,6 +50,54 @@ func (ts TaskGRPCServer) createTransactionTask(task *taskpb.CreateTaskRequest) e
 	}
 
 	fmt.Printf("POSTGRES: Task Created!\nData: %#v", newTask)
+
+	return nil
+}
+
+func (ts TaskGRPCServer) ApproveTask(ctx context.Context, req *taskpb.ApproveTaskRequest) (*taskpb.TaskResponse, error) {
+	task, err := ts.Models.Task.GetTaskByID(int(req.TaskID))
+	if err != nil {
+		return ts.writeResponse(true, "Task Not Found!")
+	}
+
+	if task.Status != 0 || task.Step != 2 {
+		log.Printf("Failed to approve task %v, task has been rejected", task.TaskID)
+		return ts.writeResponse(true, "task has been rejected")
+	}
+
+	// update task to approve
+	if err := task.ApproveTask(); err != nil {
+		log.Println("Failed to approve task: ", err)
+		return ts.writeResponse(true, err.Error())
+	}
+
+	// make and start transaction
+	if err := ts.makeAndStartTransaction(*task); err != nil {
+		log.Println("Failed to start transaction: ", err)
+		return ts.writeResponse(true, err.Error())
+	}
+	
+	
+	return ts.writeResponse(false, "task approved!")
+}
+
+
+func (ts TaskGRPCServer) makeAndStartTransaction(task data.Task) error {
+	method := "TransactionRPCServer.CreateTransaction"
+	
+	var responsePayload rpc_server.RPCResponsePayload
+
+	trxPayload := rpc_server.CreateTransactionPayload{
+		TaskID: task.TaskID,
+		DebitAccount: task.Data.DebitAccount,
+		CreditAccount: task.Data.CreditAccount,
+		Amount: task.Data.Amount,
+	}
+
+	if err := ts.RPCClientTransaction.Call(method, trxPayload, &responsePayload); err != nil {
+		log.Println("Failed to make and start transaction: ", responsePayload.Message)
+		return err
+	}
 
 	return nil
 }
