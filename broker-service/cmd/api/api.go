@@ -93,8 +93,10 @@ func (api *APIHandler) handleSubmition(w http.ResponseWriter, r *http.Request) {
 		api.taskCreateViaRPC(w, request_payload.Task)
 	case "grpc-task-create":
 		api.taskCreateViaGRPC(w, request_payload.Task)
-	case "task-approve":
-		api.taskApprove(w, request_payload.Task)
+	case "rpc-task-approve":
+		api.taskApproveViaRPC(w, request_payload.Task)
+	case "grpc-task-approve":
+		api.taskApproveViaGRPC(w, request_payload.Task)
 	case "task-reject":
 		api.taskReject(w, request_payload.Task)
 
@@ -157,7 +159,28 @@ func (api *APIHandler) taskCreateViaRPC(w http.ResponseWriter, task Task) {
 	api.writeResponse(w, http.StatusCreated, responsePayload)
 }
 
-func (api *APIHandler) taskApprove(w http.ResponseWriter, task Task) {
+func (api *APIHandler) taskApproveViaGRPC(w http.ResponseWriter, task Task) {
+	grpc_payload := taskpb.ApproveTaskRequest{
+		TaskID: int32(task.TaskID),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 3)
+	defer cancel()
+
+	res, err := api.App.GRPCClientTask.ApproveTask(ctx, &grpc_payload)
+	if err != nil {
+		log.Println("gRPC | ApproveTask error: ", err)
+		api.errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var responsePayload jsonResponse
+	responsePayload.Error = false
+	responsePayload.Message = res.Message
+	api.writeResponse(w, http.StatusOK, responsePayload)
+}
+
+func (api *APIHandler) taskApproveViaRPC(w http.ResponseWriter, task Task) {
 	var rpcResponse RPCResponsePayload
 	payload := ApproveTaskPayload{
 		task.TaskID,
