@@ -101,3 +101,23 @@ func (ts TaskGRPCServer) makeAndStartTransaction(task data.Task) error {
 
 	return nil
 }
+
+func (ts TaskGRPCServer) RejectTask(ctx context.Context, req *taskpb.RejectTaskRequest) (*taskpb.TaskResponse, error) {
+	task, err := ts.Models.Task.GetTaskByID(int(req.TaskID))
+	if err != nil {
+		log.Println("Failed get task: ", err)
+		return ts.writeResponse(true, fmt.Sprintf("Task not found: %s", err))
+	}
+
+	if task.Status == 1 {
+		log.Printf("Failed to reject transaction, task has been approved")
+		return ts.writeResponse(true, "task has been rejected")
+	}
+
+	if err := task.RejectTask(); err != nil {
+		log.Println("Failed to reject task: ", err)
+		return ts.writeResponse(true, "failed to reject task: " + err.Error())
+	}
+
+	return ts.writeResponse(false, "task rejected!")
+}
