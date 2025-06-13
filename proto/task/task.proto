@@ -6,6 +6,7 @@ option go_package = "./task;task";
 
 service TaskService {
     rpc CreateTask(CreateTaskRequest) returns (TaskResponse);
+    rpc ApproveTask(ApproveTaskRequest) returns (TaskResponse);
 }
 
 message TransactionDataTask {
@@ -23,6 +24,10 @@ message DataTask {
 message CreateTaskRequest {
     string Type = 1;
     DataTask Data = 2;
+}
+
+message ApproveTaskRequest{
+    int32 TaskID = 1;
 }
 
 message TaskResponse {
