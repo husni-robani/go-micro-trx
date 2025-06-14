@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/rpc"
 	taskpb "proto/task"
-	"task-service/cmd/rpc_server"
+	transactionpb "proto/transaction"
 	"task-service/data"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,7 +16,8 @@ import (
 type TaskGRPCServer struct {
 	taskpb.UnimplementedTaskServiceServer
 	Models data.Models
-	RPCClientTransaction *rpc.Client
+	GRPCClientTransaction transactionpb.TransactionServiceClient
+	
 }
 
 func (ts TaskGRPCServer) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequest) (*taskpb.TaskResponse, error) {
@@ -73,7 +74,6 @@ func (ts TaskGRPCServer) ApproveTask(ctx context.Context, req *taskpb.ApproveTas
 
 	// make and start transaction
 	if err := ts.makeAndStartTransaction(*task); err != nil {
-		log.Println("Failed to start transaction: ", err)
 		return ts.writeResponse(true, err.Error())
 	}
 	
@@ -83,22 +83,23 @@ func (ts TaskGRPCServer) ApproveTask(ctx context.Context, req *taskpb.ApproveTas
 
 
 func (ts TaskGRPCServer) makeAndStartTransaction(task data.Task) error {
-	method := "TransactionRPCServer.CreateTransaction"
-	
-	var responsePayload rpc_server.RPCResponsePayload
-
-	trxPayload := rpc_server.CreateTransactionPayload{
-		TaskID: task.TaskID,
+	requestPayload := transactionpb.CreateTransactionRequest{
+		TaskID: int32(task.TaskID),
 		DebitAccount: task.Data.DebitAccount,
 		CreditAccount: task.Data.CreditAccount,
 		Amount: task.Data.Amount,
 	}
 
-	if err := ts.RPCClientTransaction.Call(method, trxPayload, &responsePayload); err != nil {
-		log.Println("Failed to make and start transaction: ", responsePayload.Message)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 3)
+	defer cancel()
+
+	res, err := ts.GRPCClientTransaction.CreateTransaction(ctx, &requestPayload)
+	if err != nil {
+		log.Println("gRPC | Failed to call method CreateTransaction: ", err)
 		return err
 	}
 
+	log.Printf("CreateTransaction Response: %v", res)
 	return nil
 }
 

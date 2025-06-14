@@ -18,14 +18,17 @@ import (
 	"time"
 
 	taskpb "proto/task"
+	transactionpb "proto/transaction"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	models := data.New(connectDB())
 	rpcClientTransaction := connectRPCClient(os.Getenv("TRANSACTION_RPC_ADDRESS"))
+	grpcClientTransaction := connectTransactionGRPCClient()
 	
 	app := config.Config{
 		Models: models,
@@ -50,7 +53,7 @@ func main() {
 	// register gRPC object
 	taskpb.RegisterTaskServiceServer(g_server, grpc_server.TaskGRPCServer{
 		Models: models,
-		RPCClientTransaction: rpcClientTransaction,
+		GRPCClientTransaction: grpcClientTransaction,
 	})
 
 	// serve gRPC
@@ -178,6 +181,31 @@ func connectRPCClient(address string) *rpc.Client {
 		}
 
 		log.Printf("%v connected!", address)
+
+		return client
+	}
+}
+
+func connectTransactionGRPCClient() transactionpb.TransactionServiceClient {
+	counter := 1
+	task_service_address := os.Getenv("TRANSACTION_GRPC_ADDRESS")
+
+	for {	
+		conn, err := grpc.NewClient(task_service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			if counter >= 5 {
+				log.Panicf("gRPC | %v connection failed: %v", task_service_address, err)
+			}
+
+			log.Printf("gRPC not connected yet: %v (waiting for 2 second)\n", err)
+			time.Sleep(time.Second * 2)
+			counter ++
+			continue
+		}
+
+		client := transactionpb.NewTransactionServiceClient(conn)
+
+		log.Printf("%v Connected!", task_service_address)
 
 		return client
 	}
