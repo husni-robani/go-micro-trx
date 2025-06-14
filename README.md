@@ -2,7 +2,7 @@ This is a simple microservices project built in Go, simulating a basic transacti
 
 ### Architecture Overview
 
-![image](https://github.com/user-attachments/assets/f0df528b-5b77-470d-a9ce-8f8a6d673cd6)
+![image](https://github.com/user-attachments/assets/7c4891a5-e209-4529-bc18-5eb29f72bcc1)
 
 ### Key Components
 
