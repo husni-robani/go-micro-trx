@@ -16,7 +16,8 @@ services:
       context: ./task-service
       dockerfile: task-service.dockerfile
     ports:
-      - "8081:80"
+      - "8081:80" # REST
+      - "50002:50002" #gRPC (only for development)
     deploy:
       mode: replicated
       replicas: 1
