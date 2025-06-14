@@ -3,3 +3,19 @@ syntax = "proto3";
 package transaction;
 
 option go_package = "./transaction;transaction";
+
+service TransactionService {
+    rpc CreateTransaction(CreateTransactionRequest) returns (TransactionResponse);
+}
+
+message CreateTransactionRequest {
+    int32 TaskID = 1;
+    string DebitAccount = 2;
+    string CreditAccount = 3;
+    int64 Amount = 4;
+}
+
+message TransactionResponse {
+    bool error = 1;
+    string message = 2;
+}
