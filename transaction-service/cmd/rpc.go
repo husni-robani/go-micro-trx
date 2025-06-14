@@ -1,25 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"sync"
+	"transaction-service/cmd/publisher"
 	"transaction-service/data"
 )
 
 type TransactionRPCServer struct {
 	models data.Models
-	LogPublisher Publisher
-	MailPublisher Publisher
+	publisher publisher.Publisher
 }
 
-func NewTransactionRPCServer(m data.Models, logPublisher Publisher, mailPublisher Publisher) TransactionRPCServer {
+func NewTransactionRPCServer(m data.Models, p publisher.Publisher) TransactionRPCServer {
 	return TransactionRPCServer{
 		models: m,
-		LogPublisher: logPublisher,
-		MailPublisher: mailPublisher,
+		publisher: p,
 	}
 }
 
@@ -33,18 +31,6 @@ type CreateTransactionPayload struct {
 	DebitAccount string
 	CreditAccount string
 	Amount int64
-}
-
-type LogMessage struct {
-	Name string `json:"name"`
-	Data string `json:"data"`
-}
-
-type MailMessage struct {
-	Recipient string `json:"recipient"`
-	DebitAccount string `json:"debit_account"`
-	CreditAccount string `json:"credit_account"`
-	Amount int64 `json:"amount"`
 }
 
 func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPayload, result *RPCResponsePayload) error {
@@ -69,29 +55,7 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 		}
 		return err
 	}
-
-	// send log and email when transaction success
-		// log message
-	jsonLogMessage, err := json.Marshal(LogMessage{
-		Name: "transaction",
-		Data: fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount),
-	})
-	if err != nil {
-		log.Println("Failed to marshal json: ", err)
-		return err
-	}
-
-		// email message
-	jsonMailMessage, err := json.Marshal(MailMessage{
-		Recipient: "husnir2005@gmail.com",
-		DebitAccount: newTransaction.DebitAccount,
-		CreditAccount: newTransaction.CreditAccount,
-		Amount: int64(newTransaction.Amount),
-	})
-	if err != nil {
-		log.Println("Failed to marshal json: ", err)
-		return err
-	}
+	
 
 	if isTransactionSuccess {
 		var wg sync.WaitGroup
@@ -101,8 +65,14 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 		wg.Add(2)
 		go func(){
 			defer wg.Done()
-
-			err := rpc.LogPublisher.PublishMessage(jsonLogMessage)
+			
+			// log message
+			logMessage := publisher.LogMessage{
+				Name: "transaction",
+				Data: fmt.Sprintf("Transaction success to %s with amount %d", newTransaction.CreditAccount, newTransaction.Amount),
+			}
+									// err := rpc.LogPublisher.PublishMessage(jsonLogMessage)
+			err := rpc.publisher.PublishLogMessage(logMessage)
 			if err != nil {
 				mu.Lock()
 				errorPublish = append(errorPublish, err)
@@ -113,7 +83,15 @@ func (rpc TransactionRPCServer) CreateTransaction(trxPayload CreateTransactionPa
 		go func(){
 			defer wg.Done()
 
-			err := rpc.MailPublisher.PublishMessage(jsonMailMessage)
+			// email message
+			mailMessage := publisher.MailMessage{
+				Recipient: "husnir2005@gmail.com",
+				DebitAccount: newTransaction.DebitAccount,
+				CreditAccount: newTransaction.CreditAccount,
+				Amount: int64(newTransaction.Amount),
+			}
+									// err := rpc.MailPublisher.PublishMessage(jsonMailMessage)
+			err := rpc.publisher.PublishMailMessage(mailMessage)
 			if err != nil {
 				mu.Lock()
 				errorPublish = append(errorPublish, err)

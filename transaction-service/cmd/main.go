@@ -2,15 +2,21 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
 	"time"
+	"transaction-service/cmd/grpc_server"
+	"transaction-service/cmd/publisher"
 	"transaction-service/data"
+
+	transactionpb "proto/transaction"
 
 	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/grpc"
 )
 
 type Config struct{
@@ -24,18 +30,52 @@ func main(){
 		Models: data.New(db),
 	}
 
-	conn := connectAMQP()
+	// AMQP
+	amqpConnection := connectAMQP()
+	p := publisher.NewPublisher(amqpConnection, os.Getenv("EXCHANGE_NAME"))
 
-	logPublisher := NewPublisher(conn, os.Getenv("EXCHANGE_NAME"), os.Getenv("LOG_ROUTING_KEY"))
-	mailPublisher := NewPublisher(conn, os.Getenv("EXCHANGE_NAME"), os.Getenv("MAIL_ROUTING_KEY"))
-
-	rpcServer := NewTransactionRPCServer(app.Models, logPublisher, mailPublisher)
-
+	// RPC
+	rpcServer := NewTransactionRPCServer(app.Models, p)
 	if err := rpc.Register(rpcServer); err != nil {
 		log.Panic("Failed to register RPC object: ", err)
 	}
 	
+	// gRPC
+	transactionGRPC := grpc_server.NewTransactionGRPCServer(app.Models, p)
+	grpcServer := grpc.NewServer()
+	transactionpb.RegisterTransactionServiceServer(grpcServer, transactionGRPC)
+	
+	
+	go listenGRPC(grpcServer)
 	listenRPC()
+}
+
+func listenGRPC(grpcServer *grpc.Server) error {
+	port := os.Getenv("GRPC_PORT")
+	counter := 0
+	log.Printf("Starting gRPC on Port:%s ....", port)
+
+	var err error
+	for {
+		if counter >= 4 {
+				log.Fatal("gRPC connection failed: ", err)
+		}
+		
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+		if err != nil {
+			counter ++
+			log.Println("gRPC not connected yet....")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		if err := grpcServer.Serve(lis); err != nil {
+			counter ++
+			log.Println("gRPC not connected yet....")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		
+	}
 }
 
 func listenRPC() error {
